@@ -15,8 +15,16 @@ let main argv =
                 data.ColumnKeys
                 |> Seq.toArray
             // There are seven categories, each with a dummy variable.
+            // We have to convert inferred boolean type to int in order
+            // to sum the values.
             let labels =
                 data.Columns.[colNames.[(nCol - 7)..(nCol - 1)]]
+                |> Frame.mapColValues (fun c -> c.As<int>())
             printfn "%dx%d %A" labels.RowCount labels.ColumnCount (labels.GetRowAt(0))
+            let catSums =
+                labels
+                |> Stats.sum
+            // Below it shows the data isn't balanced.
+            printfn "category representative counts: %A" catSums
         0
     | _ -> 1
