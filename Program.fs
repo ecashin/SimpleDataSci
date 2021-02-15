@@ -36,11 +36,13 @@ let rebalance (catColumn: string) (catCounts: Series<string,int>) (data: Frame<i
         |> Frame.ofRows
     balanced
 
+// inspired by
+// https://github.com/fslaborg/Deedle/blob/master/tests/Deedle.Tests/Frame.fs#L1420
 let catReps (category:string) df =
     df
     |> Frame.groupRowsByString category
-    |> Frame.getRows
-    |> Stats.levelCount fst
+    |> Frame.nest
+    |> Series.mapValues Frame.countRows
 
 [<EntryPoint>]
 let main argv =
