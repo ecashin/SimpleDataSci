@@ -5,33 +5,46 @@
 open MathNet.Numerics.Random
 open Deedle
 
-let shuffleOrder n =
+let shuffleOrder (keys: seq<int>) =
     // inspred by
     // http://www.fssnip.net/kS/title/Sample-for-traintest-sets-in-Deedle-Frames
     let rng = SystemRandomSource.Default
-    seq { 1..n }
-    |> Seq.map (fun i -> (i, rng.Next()))
+    keys
+    |> Seq.map (fun key -> (key, rng.Next()))
     |> Seq.sortBy snd
     |> Seq.map fst
 
-let rebalance (catSums: Series<string,float>) (data: Frame<int,string>) =
-    let n = Stats.min catSums |> int
-    let order: int list =
-        shuffleOrder data.RowCount
-        |> Seq.take n
-        |> Seq.toList
+let sampleKeys (n: int) (keys: seq<int>) =
+    shuffleOrder keys |> Seq.take n
+
+let rebalance (catColumn: string) (catCounts: Series<string,int>) (data: Frame<int,string>) =
+    let n = Stats.min catCounts |> int
     let balanced =
-        catSums.Keys
+        catCounts.Keys
         |> Seq.collect (fun label ->
-            data
-            |> Frame.filterRowsBy label 1
-            |> Frame.sliceRows order
-            |> (fun df -> df.GetRows() |> Series.values)
+            let catData =
+                data
+                |> Frame.filterRowsBy catColumn label
+            let order = sampleKeys n catData.RowKeys
+            let sampled =
+                catData
+                |> Frame.sliceRows order
+                // |> Frame.dropEmptyRows
+                |> (fun df -> df.GetRows() |> Series.values)
+            (sampled |> Series.ofValues |> Frame.ofRows).SaveCsv("/dev/stdout")
+            sampled
         )
         |> Series.ofValues
         |> Frame.ofRows
     printfn "balanced %A has rows x cols: %dx%d" balanced balanced.RowCount balanced.ColumnCount
     balanced
+    // |> Frame.dropSparseRows
+
+let catReps (category:string) df =
+    df
+    |> Frame.groupRowsByString category
+    |> Frame.getRows
+    |> Stats.levelCount fst
 
 [<EntryPoint>]
 let main argv =
@@ -42,15 +55,15 @@ let main argv =
             |> Frame.indexRowsOrdinally
         let nRow, nCol = data.RowCount, data.ColumnCount
         printfn "number of rows:%d, cols:%d" nRow nCol
-        if data.RowCount > 0 then
+        if nRow > 0 then
             printfn "first row: %A" (data.GetRowAt 0)
-            let catSums =
-                data
-                |> Frame.groupRowsByString "Category"
-                |> Frame.getRows
-                |> Stats.levelCount fst
+            let catSums = data |> catReps "Category"
             // Below it shows the data isn't balanced.
             printfn "initial category representative counts: %A" catSums
+            let balanced =
+                data
+                |> rebalance "Category" catSums
+            balanced.SaveCsv("balanced.csv")
+            printfn "balanced category representative counts: %A" (catReps "Category" balanced)
         0
     | _ -> 1
-    
