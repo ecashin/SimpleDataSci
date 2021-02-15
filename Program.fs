@@ -29,16 +29,12 @@ let rebalance (catColumn: string) (catCounts: Series<string,int>) (data: Frame<i
             let sampled =
                 catData
                 |> Frame.sliceRows order
-                // |> Frame.dropEmptyRows
                 |> (fun df -> df.GetRows() |> Series.values)
-            (sampled |> Series.ofValues |> Frame.ofRows).SaveCsv("/dev/stdout")
             sampled
         )
         |> Series.ofValues
         |> Frame.ofRows
-    printfn "balanced %A has rows x cols: %dx%d" balanced balanced.RowCount balanced.ColumnCount
     balanced
-    // |> Frame.dropSparseRows
 
 let catReps (category:string) df =
     df
