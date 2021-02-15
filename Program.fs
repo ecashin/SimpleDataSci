@@ -51,17 +51,19 @@ let plotDemo labelCol (df: Frame<_,_>) =
             mode = "markers",
             name = name
         )
-    let colToPlot = Seq.tail indepValueCols |> Seq.head
-    let traces =
-        df
-        |> Frame.groupRowsByString labelCol
-        |> Frame.nest
-        |> Series.map (fun k v -> makeTrace k (v.GetColumn(colToPlot)))
-        |> Series.values
-    traces
-    |> Chart.Plot
-    |> Chart.WithTitle colToPlot
-    |> Chart.Show
+    indepValueCols
+        |> Seq.map (fun colToPlot ->
+        let traces =
+            df
+            |> Frame.groupRowsByString labelCol
+            |> Frame.nest
+            |> Series.map (fun k v -> makeTrace k (v.GetColumn(colToPlot)))
+            |> Series.values
+        traces
+        |> Chart.Plot
+        |> Chart.WithTitle colToPlot
+    )
+    |> Chart.ShowAll
 
 // inspired by
 // https://github.com/fslaborg/Deedle/blob/master/tests/Deedle.Tests/Frame.fs#L1420
