@@ -4,6 +4,7 @@
 // https://archive.ics.uci.edu/ml/datasets/HCV+data
 open MathNet.Numerics.Random
 open Deedle
+open XPlot.Plotly
 
 let shuffleOrder (keys: seq<int>) =
     // inspred by
@@ -36,6 +37,32 @@ let rebalance (catColumn: string) (catCounts: Series<string,int>) (data: Frame<i
         |> Frame.ofRows
     balanced
 
+let plotDemo labelCol (df: Frame<_,_>) =
+    let indepValueCols =
+        df.ColumnKeys
+        |> Seq.filter (fun col -> col <> labelCol)
+    let yCol = Seq.head indepValueCols
+    let makeTrace name col =
+        let x = (col |> Series.indexOrdinally).Keys
+        let y = col |> Series.values
+        Scatter(
+            x = x,
+            y = y,
+            mode = "markers",
+            name = name
+        )
+    let colToPlot = Seq.tail indepValueCols |> Seq.head
+    let traces =
+        df
+        |> Frame.groupRowsByString labelCol
+        |> Frame.nest
+        |> Series.map (fun k v -> makeTrace k (v.GetColumn(colToPlot)))
+        |> Series.values
+    traces
+    |> Chart.Plot
+    |> Chart.WithTitle colToPlot
+    |> Chart.Show
+
 // inspired by
 // https://github.com/fslaborg/Deedle/blob/master/tests/Deedle.Tests/Frame.fs#L1420
 let catReps (category:string) df =
@@ -63,5 +90,6 @@ let main argv =
                 |> rebalance "Category" catSums
             balanced.SaveCsv("balanced.csv")
             printfn "balanced category representative counts: %A" (catReps "Category" balanced)
+            plotDemo "Category" balanced
         0
     | _ -> 1
