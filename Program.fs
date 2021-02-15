@@ -1,4 +1,7 @@
 // https://archive.ics.uci.edu/ml/datasets/Amphibians
+// The "dummy variables" in Amphibians data are not really dummy variables
+// but non-categorical boolean indicators.
+// https://archive.ics.uci.edu/ml/datasets/HCV+data
 open MathNet.Numerics.Random
 open Deedle
 
@@ -35,27 +38,19 @@ let main argv =
     match argv with
     | [|dataCsvFileName|] ->
         let data =
-            Frame.ReadCsv(dataCsvFileName, separators=";", inferTypes=true)
+            Frame.ReadCsv(dataCsvFileName, separators=",", inferTypes=true)
             |> Frame.indexRowsOrdinally
         let nRow, nCol = data.RowCount, data.ColumnCount
         printfn "number of rows:%d, cols:%d" nRow nCol
         if data.RowCount > 0 then
             printfn "first row: %A" (data.GetRowAt 0)
-            let colNames =
-                data.ColumnKeys
-                |> Seq.toArray
-            // There are seven categories, each with a dummy variable.
-            // We have to convert inferred boolean type to int in order
-            // to sum the values.
-            let labels =
-                data.Columns.[colNames.[(nCol - 7)..(nCol - 1)]]
-                |> Frame.mapColValues (fun c -> c.As<int>())
-            printfn "%dx%d %A" labels.RowCount labels.ColumnCount (labels.GetRowAt(0))
             let catSums =
-                labels
-                |> Stats.sum
+                data
+                |> Frame.groupRowsByString "Category"
+                |> Frame.getRows
+                |> Stats.levelCount fst
             // Below it shows the data isn't balanced.
-            printfn "category representative counts: %A" catSums
-            rebalance catSums data |> ignore
+            printfn "initial category representative counts: %A" catSums
         0
     | _ -> 1
+    
