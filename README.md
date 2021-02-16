@@ -13,6 +13,8 @@ https://archive.ics.uci.edu/ml/datasets/HCV+data
 
 ## Resources
 
+### Deedle
+
 There are happy-path tutorials for Deedle
 that can get you started.
 
@@ -29,3 +31,7 @@ The Deedle tests are a great help, providing usage examples.
 
 https://github.com/fslaborg/Deedle/blob/master/tests/Deedle.Tests/Frame.fs#L1420
 https://github.com/fslaborg/Deedle/blob/master/tests/Deedle.Tests/Stats.fs
+
+### XPlot.Plotly
+
+https://fslab.org/XPlot/plotly.html
