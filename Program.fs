@@ -37,31 +37,43 @@ let rebalance (catColumn: string) (catCounts: Series<string,int>) (data: Frame<i
         |> Frame.ofRows
     balanced
 
+// You can do this functionally, figuring out how to avoid
+// tuples with duplicate values or tuples that are duplicates
+// when swapped, but the sequence comprehension syntax
+// using an array is *really* easy for me to work with here.
+let variablePairs vars =
+    let a = vars |> Seq.toArray
+    seq {
+        for i in 0..(a.Length - 2) do
+            for j in (i + 1)..(a.Length - 1) do
+                (a.[i], a.[j])
+    }
+
 let plotDemo labelCol (df: Frame<_,_>) =
     let indepValueCols =
         df.ColumnKeys
         |> Seq.filter (fun col -> col <> labelCol)
     let yCol = Seq.head indepValueCols
-    let makeTrace name col =
-        let x = (col |> Series.indexOrdinally).Keys
-        let y = col |> Series.values
+    let makeTrace name xCol yCol =
+        let x = xCol |> Series.values
+        let y = yCol |> Series.values
         Scatter(
             x = x,
             y = y,
             mode = "markers",
             name = name
         )
-    indepValueCols
-        |> Seq.map (fun colToPlot ->
+    variablePairs indepValueCols
+        |> Seq.map (fun (x, y) ->
         let traces =
             df
             |> Frame.groupRowsByString labelCol
             |> Frame.nest
-            |> Series.map (fun k v -> makeTrace k (v.GetColumn(colToPlot)))
+            |> Series.map (fun k v -> makeTrace k (v.GetColumn(x)) (v.GetColumn(y)))
             |> Series.values
         traces
         |> Chart.Plot
-        |> Chart.WithTitle colToPlot
+        |> Chart.WithTitle (sprintf "%s ~ %s" y x)
     )
     |> Chart.ShowAll
 
