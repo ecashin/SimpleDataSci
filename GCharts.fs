@@ -1,6 +1,5 @@
 module GCharts
 
-open Deedle
 open MathNet.Numerics.Random
 open XPlot.GoogleCharts
 
