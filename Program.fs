@@ -88,6 +88,9 @@ let catReps (category:string) df =
 [<EntryPoint>]
 let main argv =
     match argv with
+    | [| |] ->
+        GCharts.googleChartDemo () |> ignore
+        0
     | [|dataCsvFileName|] ->
         let data =
             Frame.ReadCsv(dataCsvFileName, separators=",", inferTypes=true)
