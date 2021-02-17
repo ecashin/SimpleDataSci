@@ -4,7 +4,7 @@
 // https://archive.ics.uci.edu/ml/datasets/HCV+data
 open MathNet.Numerics.Random
 open Deedle
-open XPlot.Plotly
+open XPlot.GoogleCharts
 
 let shuffleOrder (keys: seq<int>) =
     // inspred by
@@ -57,25 +57,27 @@ let plotDemo labelCol (df: Frame<_,_>) =
     let makeTrace name xCol yCol =
         let x = xCol |> Series.values
         let y = yCol |> Series.values
-        Scatter(
-            x = x,
-            y = y,
-            mode = "markers",
-            name = name
-        )
+        name, Seq.zip x y
     variablePairs indepValueCols
         |> Seq.map (fun (x, y) ->
-        let traces =
-            df
-            |> Frame.groupRowsByString labelCol
-            |> Frame.nest
-            |> Series.map (fun k v -> makeTrace k (v.GetColumn(x)) (v.GetColumn(y)))
-            |> Series.values
-        traces
-        |> Chart.Plot
-        |> Chart.WithTitle (sprintf "%s ~ %s" y x)
-    )
-    |> Chart.ShowAll
+            let labels, traces =
+                df
+                |> Frame.groupRowsByString labelCol
+                |> Frame.nest
+                |> Series.map (fun k v -> makeTrace k (v.GetColumn(x)) (v.GetColumn(y)))
+                |> Series.values
+                |> Seq.toList
+                |> List.unzip
+            let trendlineOptions = Array.init (List.length labels) (fun _ -> Trendline())
+            traces
+            |> Chart.Scatter
+            |> Chart.WithLabels labels
+            |> Chart.WithLegend true
+            |> Chart.WithOptions(Options(trendlines=trendlineOptions))
+            |> Chart.WithTitle (sprintf "%s ~ %s" y x)
+        )
+    |> Seq.take 5 // XXXdebug: save browser slowness
+    |> Seq.iter (fun chart -> chart |> Chart.Show)
 
 // inspired by
 // https://github.com/fslaborg/Deedle/blob/master/tests/Deedle.Tests/Frame.fs#L1420
@@ -88,9 +90,6 @@ let catReps (category:string) df =
 [<EntryPoint>]
 let main argv =
     match argv with
-    | [| |] ->
-        GCharts.googleChartDemo () |> ignore
-        0
     | [|dataCsvFileName|] ->
         let data =
             Frame.ReadCsv(dataCsvFileName, separators=",", inferTypes=true)
