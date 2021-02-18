@@ -85,13 +85,42 @@ let catReps (category:string) df =
     |> Frame.nest
     |> Series.mapValues Frame.countRows
 
+let readData dataCsvFileName =
+    Frame.ReadCsv(dataCsvFileName, separators=",", inferTypes=true)
+    |> Frame.indexRowsOrdinally
+
+let factorToDummies factor =
+    let levels =
+        factor
+        |> Series.values
+        |> Seq.distinct
+        |> Seq.indexed
+        |> Seq.map (fun (ord, value) -> value, ord)
+        |> Map
+    let p = levels.Count
+    factor
+    |> Series.mapValues (fun v ->
+        let mutable oneHot = Array.zeroCreate p
+        match levels.TryFind v with
+        | Some(code) ->
+            oneHot.[code] <- 1
+        | _ -> failwith "Unrecognized categorical value"
+        oneHot
+    )
+    |> Series.values
+    |> Seq.toArray
+
 [<EntryPoint>]
 let main argv =
     match argv with
+    | [|"-m"; dataCsvFileName|] ->
+        let data = readData dataCsvFileName
+        let y = factorToDummies (data |> Frame.getCol "Category")
+        printfn "first: %A" y.[0]
+        printfn " last: %A" y.[y.Length - 1]
+        0
     | [|dataCsvFileName|] ->
-        let data =
-            Frame.ReadCsv(dataCsvFileName, separators=",", inferTypes=true)
-            |> Frame.indexRowsOrdinally
+        let data = readData dataCsvFileName
         let nRow, nCol = data.RowCount, data.ColumnCount
         printfn "number of rows:%d, cols:%d" nRow nCol
         if nRow > 0 then
