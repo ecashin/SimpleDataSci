@@ -100,12 +100,11 @@ let factorToDummies factor =
     let p = levels.Count
     factor
     |> Series.mapValues (fun v ->
-        let mutable oneHot = Array.zeroCreate p
-        match levels.TryFind v with
-        | Some(code) ->
-            oneHot.[code] <- 1
-        | _ -> failwith "Unrecognized categorical value"
-        oneHot
+        let code =
+            match levels.TryFind v with
+            | Some(c) -> c
+            | _ -> failwith "Unrecognized categorical value"
+        Array.init p (fun i -> if i = code then 1 else 0)
     )
     |> Series.values
     |> Seq.toArray
