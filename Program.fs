@@ -87,22 +87,20 @@ let readData dataCsvFileName =
     Frame.ReadCsv(dataCsvFileName, separators=",", inferTypes=true)
     |> Frame.indexRowsOrdinally
 
-let factorToDummies factor =
-    let levels =
-        factor
-        |> Series.values
-        |> Seq.distinct
-        |> Seq.indexed
-        |> Seq.map (fun (ord, value) -> value, ord)
-        |> Map
-    let p = levels.Count
+let factorToBinaryOutcome factor =
+    let binOutcome =
+        [
+            ("0=Blood Donor", 0);
+            ("0s=suspect Blood Donor", 0);
+            ("1=Hepatitis", 1);
+            ("2=Fibrosis", 1);
+            ("3=Cirrhosis", 1)
+        ] |> Map.ofList
     factor
     |> Series.mapValues (fun v ->
-        let code =
-            match levels.TryFind v with
-            | Some(c) -> c
-            | _ -> failwith "Unrecognized categorical value"
-        Array.init p (fun i -> if i = code then 1 else 0)
+        match binOutcome.TryFind v with
+        | None -> failwith (sprintf "Unknown category: %s" v)
+        | Some(code) -> code
     )
     |> Series.values
     |> Seq.toArray
@@ -112,7 +110,7 @@ let main argv =
     match argv with
     | [|"-m"; dataCsvFileName|] ->
         let data = readData dataCsvFileName
-        let y = factorToDummies (data |> Frame.getCol "Category")
+        let y = factorToBinaryOutcome (data |> Frame.getCol "Category")
         printfn "first: %A" y.[0]
         printfn " last: %A" y.[y.Length - 1]
         0
