@@ -1,6 +1,4 @@
-// https://archive.ics.uci.edu/ml/datasets/Amphibians
-// The "dummy variables" in Amphibians data are not really dummy variables
-// but non-categorical boolean indicators.
+// This demo uses the data set found at the URL below.
 // https://archive.ics.uci.edu/ml/datasets/HCV+data
 open MathNet.Numerics.Random
 open Deedle
