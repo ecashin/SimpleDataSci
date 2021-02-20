@@ -35,3 +35,7 @@ https://github.com/fslaborg/Deedle/blob/master/tests/Deedle.Tests/Stats.fs
 ### XPlot.Plotly
 
 https://fslab.org/XPlot/plotly.html
+
+### F# for ML
+
+https://lenadroid.github.io/posts/machine-learning-fsharp-accorddotnet.html
