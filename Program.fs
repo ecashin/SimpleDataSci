@@ -1,5 +1,7 @@
 // This demo uses the data set found at the URL below.
 // https://archive.ics.uci.edu/ml/datasets/HCV+data
+open Accord.Statistics.Models.Regression
+open Accord.Statistics.Models.Regression.Fitting
 open MathNet.Numerics.Random
 open Deedle
 open XPlot.Plotly
@@ -105,28 +107,35 @@ let factorToBinaryOutcome factor =
     |> Series.values
     |> Seq.toArray
 
+let logisticRegressionCoefficients (y: int []) (x: float [] []) =
+    assert (x.Length > 0)
+    let learner = IterativeReweightedLeastSquares<LogisticRegression>()
+    let model = learner.Learn(x, y)
+    let coefs =
+        x.[0]
+        |> Seq.mapi (fun j _ -> model.GetCoefficient (int32 j))
+        |> Seq.toArray
+        |> Array.append [| model.Intercept |]
+    coefs
+
 [<EntryPoint>]
 let main argv =
     match argv with
     | [|"-m"; dataCsvFileName|] ->
-        let data = readData dataCsvFileName
+        let data =
+            readData dataCsvFileName
+            |> Frame.dropSparseRows
         let y = factorToBinaryOutcome (data |> Frame.getCol "Category")
-        printfn "first: %A" y.[0]
-        printfn " last: %A" y.[y.Length - 1]
-        data
-        |> Frame.groupRowsBy "Category"
-        |> Frame.nest
-        |> Series.map (fun k v ->
-            printfn "%s %A" k v
-            v
+        let x =
+            data
             |> Frame.getNumericCols
-            |> Series.map (fun colKey col ->
-                let nSlots = col |> Series.countKeys
-                let nVals = col |> Series.countValues
-                printfn "col %A has %d/%d" colKey nVals nSlots
-                col
-            )
-        ) |> ignore
+            |> Frame.ofColumns
+            |> Frame.getRows
+            |> Series.values
+            |> Seq.map (Series.values >> Seq.toArray)
+            |> Seq.toArray
+        assert (y.Length = x.Length)
+        printfn "coefs for logistic regression: %A" (logisticRegressionCoefficients y x)
         0
     | [|dataCsvFileName|] ->
         let data = readData dataCsvFileName
