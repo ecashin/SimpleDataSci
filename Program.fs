@@ -113,6 +113,20 @@ let main argv =
         let y = factorToBinaryOutcome (data |> Frame.getCol "Category")
         printfn "first: %A" y.[0]
         printfn " last: %A" y.[y.Length - 1]
+        data
+        |> Frame.groupRowsBy "Category"
+        |> Frame.nest
+        |> Series.map (fun k v ->
+            printfn "%s %A" k v
+            v
+            |> Frame.getNumericCols
+            |> Series.map (fun colKey col ->
+                let nSlots = col |> Series.countKeys
+                let nVals = col |> Series.countValues
+                printfn "col %A has %d/%d" colKey nVals nSlots
+                col
+            )
+        ) |> ignore
         0
     | [|dataCsvFileName|] ->
         let data = readData dataCsvFileName
