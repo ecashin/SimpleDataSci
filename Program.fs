@@ -109,7 +109,10 @@ let factorToBinaryOutcome factor =
 
 let logisticRegressionCoefficients (y: int []) (x: float [] []) =
     assert (x.Length > 0)
-    let learner = IterativeReweightedLeastSquares<LogisticRegression>()
+    let learner =
+        IterativeReweightedLeastSquares<LogisticRegression>(
+            Iterations = 1000
+        )
     let model = learner.Learn(x, y)
     let coefs =
         x.[0]
@@ -126,10 +129,21 @@ let main argv =
             readData dataCsvFileName
             |> Frame.dropSparseRows
         let y = factorToBinaryOutcome (data |> Frame.getCol "Category")
-        let x =
+        let numCols =
             data
             |> Frame.getNumericCols
             |> Frame.ofColumns
+        let mu = numCols |> Stats.mean
+        printfn "mu: %A" mu
+        let sigma =
+            numCols
+            |> Stats.stdDev
+            |> Series.mapValues (fun v -> if v = 0.0 then 1.0 else v)
+        printfn "sigma: %A" sigma
+        let x =
+            numCols
+            |> Frame.mapRowValues (fun row -> (row.As<float>() - mu) / sigma)
+            |> Frame.ofRows
             |> Frame.getRows
             |> Series.values
             |> Seq.map (Series.values >> Seq.toArray)
