@@ -1,5 +1,9 @@
 // This demo uses the data set found at the URL below.
 // https://archive.ics.uci.edu/ml/datasets/HCV+data
+open Accord.Statistics.Models.Regression.Fitting
+open Accord.Statistics.Models.Regression
+open Accord.MachineLearning.VectorMachines
+open Accord.MachineLearning.VectorMachines.Learning
 open MathNet.Numerics.Random
 open Deedle
 open XPlot.Plotly
@@ -90,11 +94,11 @@ let readData dataCsvFileName =
 let factorToBinaryOutcome factor =
     let binOutcome =
         [
-            ("0=Blood Donor", 0);
-            ("0s=suspect Blood Donor", 0);
-            ("1=Hepatitis", 1);
-            ("2=Fibrosis", 1);
-            ("3=Cirrhosis", 1)
+            ("0=Blood Donor", 0.0);
+            ("0s=suspect Blood Donor", 0.0);
+            ("1=Hepatitis", 1.0);
+            ("2=Fibrosis", 1.0);
+            ("3=Cirrhosis", 1.0)
         ] |> Map.ofList
     factor
     |> Series.mapValues (fun v ->
@@ -105,14 +109,64 @@ let factorToBinaryOutcome factor =
     |> Series.values
     |> Seq.toArray
 
+// http://accord-framework.net/docs/html/T_Accord_Statistics_Models_Regression_LogisticRegression.htm
+let fitModel (y: float []) (x: float [] []) =
+    assert (y.Length = x.Length)
+    assert (x.Length > 0)
+    let rowLengths =
+        x
+        |> Array.map (fun row -> row.Length)
+        |> Array.distinct
+    assert (rowLengths.Length = 1)
+    (*
+    let learner = LogisticRegression()
+    learner.NumberOfInputs <- x.[0].Length
+    let teacher = IterativeReweightedLeastSquares(learner)
+    let model = teacher.Learn(x, y)
+    *)
+    let teacher =
+        ProbabilisticDualCoordinateDescent(
+            Tolerance = 1e-10,
+            Complexity = 1e10
+        )
+    let svm = teacher.Learn(x, y)
+    svm (*
+    let learner =
+        IterativeReweightedLeastSquares<LogisticRegression>(
+            Tolerance = 1e-4,
+            Iterations = 100,
+            Regularization = 0.0
+        )
+    let model = learner.Learn(x, y)
+    x.[0]
+    |> Array.mapi (fun i _ -> model.GetCoefficient (int32 i))
+    |> Array.append [|model.Intercept|]
+    *)
+
 [<EntryPoint>]
 let main argv =
     match argv with
     | [|"-m"; dataCsvFileName|] ->
         let data = readData dataCsvFileName
-        let y = factorToBinaryOutcome (data |> Frame.getCol "Category")
-        printfn "first: %A" y.[0]
-        printfn " last: %A" y.[y.Length - 1]
+        let y =
+            factorToBinaryOutcome (data |> Frame.getCol "Category")
+        let nCols =
+            data
+            |> Frame.getNumericCols
+            |> Series.countKeys
+        let x =
+            data
+            |> Frame.getNumericCols
+            |> Frame.ofColumns
+            |> Frame.getRows
+            |> Series.values
+            |> Seq.map (Series.values >> Seq.toArray)
+            |> Seq.mapi (fun i v ->
+                printfn "%d has %d/%d: %A" i v.Length nCols v
+                v
+            )
+            |> Seq.toArray
+        let coefs = fitModel y x
         0
     | [|dataCsvFileName|] ->
         let data = readData dataCsvFileName
