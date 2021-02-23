@@ -128,6 +128,7 @@ let main argv =
         let data =
             readData dataCsvFileName
             |> Frame.dropSparseRows
+            |> Frame.dropCol "Column1"
         let y = factorToBinaryOutcome (data |> Frame.getCol "Category")
         let numCols =
             data
