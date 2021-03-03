@@ -53,7 +53,6 @@ let plotDemo labelCol (df: Frame<_,_>) =
     let indepValueCols =
         df.ColumnKeys
         |> Seq.filter (fun col -> col <> labelCol)
-    let yCol = Seq.head indepValueCols
     let makeTrace name xCol yCol =
         let x = xCol |> Series.values
         let y = yCol |> Series.values
